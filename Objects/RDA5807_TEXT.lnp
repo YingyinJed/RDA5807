@@ -1,0 +1,5 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\I2C.obj" 
+TO ".\Objects\RDA5807_TEXT" 
+PRINT(".\Listings\RDA5807_TEXT.m51") RAMSIZE(256) 
