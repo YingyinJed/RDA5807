@@ -1,5 +1,7 @@
-".\Objects\STARTUP.obj",
 ".\Objects\main.obj",
-".\Objects\I2C.obj" 
+".\Objects\I2C.obj",
+".\Objects\Delay.obj",
+".\Objects\UART.obj",
+".\Objects\RDA5807.obj" 
 TO ".\Objects\RDA5807_TEXT" 
 PRINT(".\Listings\RDA5807_TEXT.m51") RAMSIZE(256) 

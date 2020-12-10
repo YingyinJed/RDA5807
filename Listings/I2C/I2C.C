@@ -8,252 +8,121 @@
 *******************************************************************************/
 void delay_5us(void)
 {
-	#if Main_Fosc == 11059200	
-  		 _nop_();	//这里只采用一个_nop_指令是因为进入和退出该函数需要2个机器周期
-   					//再执行一个机器周期恰好5个5us多一点毕竟有点误差
-	#elif Main_Fosc == 12000000
-   		_nop_();
-	#elif Main_Fosc == 22118400
-		_nop_();_nop_();_nop_();
-	#endif
+	
 }
 
 /*******************************************************************************
-* 函数名         :I2C_Init()
-* 函数功能     	 :设置I2C串口
-* 输入           :无
-* 输出           :无
-*******************************************************************************/
-void I2C_Init(void)
-{
-	SDA = 1;
-	_nop_();			//进行小的延时等待电压稳定下同
-	SCL = 1;
-	_nop_();
-}
-/*******************************************************************************
-* 函数名         :I2C_Start()
+* 函数名         :IIC_Start()
 * 函数功能     	 :发送一个起始信号
 * 输入           :无
 * 输出           :无
 *******************************************************************************/
-void I2C_Start(void)
+void IIC_Start(void)
 {
-	SCL = 1;
-	_nop_();
-	SDA = 1;
-	delay_5us();	
-	//发送起始信号前两条总线的高电平要先持续>4.7us的时间
-	SDA = 0;
-	delay_5us();
-	//然后将SDA拉低>4us的时间就相当于发送了一个起始信号
+    SDA = 1;        //需在SCL之前设定
+    SCL = 1;        //硬件进入SDA检测状态
+    delay_5us();    //延时至少4.7us
+    SDA = 0;        //SDA由1->0,产生开始信号
+    delay_5us();    //延时至少4us
+    SCL = 0;        //SCL变为无效
 }
 /*******************************************************************************
-* 函数名         :I2C_Stop()
-* 函数功能     	 :发送一个起始信号
+* 函数名         :IIC_Stop()
+* 函数功能     	 :发送一个停止信号
 * 输入           :无
 * 输出           :无
 *******************************************************************************/
-void I2C_Stop(void)
+void IIC_Stop(void)
 {
-	SDA = 0;
-	_nop_();
-	SCL = 1;
-	delay_5us();	
-	//发送终止信号前SCL为高SDA为低先持续>4.7us的时间
-	SDA = 1;
-	delay_5us();
-	//然后将SDA拉高>4us的时间就相当于发送了一个起始信号
+    SDA = 0;        //在SCL之前拉低
+    SCL = 1;        //硬件进入SDA检测状态
+    delay_5us();    //至少延时4us
+    SDA = 1;        //SDA由0->1,产生结束信号
+    delay_5us();    //延时至少4.7us
 }
 /*******************************************************************************
-* 函数名         :Master_ACK(bit i)
+* 函数名         :IIC_Send_ACK(bit ack)
 * 函数功能     	 :主机向从机发送一个应答信号
 * 输入           :1应答；0非应答
 * 输出           :无
 *******************************************************************************/
-void Master_ACK(bit i)
+void IIC_Send_ACK(bit ack)
 {
-   SCL = 0;
-   _nop_();
-   //只有时钟总线为低时才允许SDA数据总线变化
-   if(i)//输入值为1表示发送应答信号拉低数据总线，否则发送非应答拉高数据总线
-   {
-   		SDA = 0;
-   }
-   else
-   {
-   		SDA = 1;
-   }
-   _nop_();
-   SCL = 1;
-   //将SCL拉高SDA数据才会被读走
-   delay_5us();//应答信号需要保持时间>4us
-   SCL = 0;
-   _nop_();
-   //将SCL重新拉低，占用总线继续通信（因为时钟总线拉低了SDA才允许变化）
-   SDA = 1;
-   _nop_();
-   //释放SDA线，不用时都要释放拉高
+    SDA = ack;      //产生应答电平
+	delay_5us();
+    SCL = 1;        //发送应答信号
+    delay_5us();    //延时至少4us
+    SCL = 0;        //整个期间保持应答信号
 }
 /*******************************************************************************
-* 函数名         :Test_ACK()
+* 函数名         :IIC_Get_ACK()
 * 函数功能     	 :检测从机是否应答
 * 输入           :无
 * 输出           :1非应答；0应答
 *******************************************************************************/
-bit Test_ACK(void)
+bit IIC_Get_ACK(void)
 {
-	SCL = 1;
+    bit ret;        //用来接收返回值
+    SDA = 1;        //电阻上拉,进入读
 	delay_5us();
-	if(SDA)//SDA为高说明从机非应答发送停止信号返回0；否则返回1
-	{
-		SCL = 0;
-		_nop_();
-		I2C_Stop();
-		return (0);
-	}
-	else
-	{
-		SCL = 0;
-		_nop_();
-		return (1);
-	}
+    SCL = 1;        //进入应答检测
+    delay_5us();    //至少延时4us
+    ret = SDA;      //保存应答信号
+    SCL = 0;
+    return ret;
 }
 /*******************************************************************************
-* 函数名         :I2C_Send_Byte(uchar byte)
+* 函数名         :bit IIC_Write_Byte(unsigned char dat)
 * 函数功能     	 :主机发送一个字节
 * 输入           :需要发送的字节
-* 输出           :无
+* 输出           :应答信号
 *******************************************************************************/
-void I2C_Send_Byte(unsigned char byte)
+bit IIC_Write_Byte(unsigned char dat)
 {
-	unsigned char i;
-	for(i = 0;i < 8;i++)
-	{
-		SCL = 0;
-		_nop_();
-		if(byte & 0x80)//由于I2C的传输是从最高位开始的而且是8位因此用0x80判断
-		{
+	bit ack;
+    unsigned char loop = 8;     //必须为一个字节
+    while(loop--){
+        // 高在前低在后
+		if (dat & 0x80)
 			SDA = 1;
-			_nop_();
-		}
 		else
-		{
 			SDA = 0;
-			_nop_();
-		}
-		SCL = 1;		//SCL置高数据才能被读出
-		_nop_();
-		byte <<= 1;		//每次左移一位循环8次就将一个字节发送出去了
-	}
-	SCL = 0;
-	_nop_();
-	SDA = 1;
-	_nop_();
+        delay_5us();
+		SCL = 1;
+        delay_5us();    //延时至少4us
+        SCL = 0;
+        dat <<= 1;      //低位向高位移动
+    }
+	
+	ack = IIC_Get_ACK();
+	
+	return ack;
 }
 /*******************************************************************************
-* 函数名         :I2C_Read_Byte()
+* 函数名         :I2C_Read_Byte(bit ack)
 * 函数功能     	 :主机通过I2C读取一个字节
-* 输入           :无
+* 输入           :需要发送的应答信号
 * 输出           :读取到的字节
 *******************************************************************************/
-unsigned char I2C_Read_Byte(void)
+unsigned char IIC_Read_Byte(bit ack)
 {
-   unsigned char Read_Data;
-   unsigned char i;
-   SCL = 0;
-   _nop_();
-   SDA = 1;
-   _nop_();
-   for(i = 0;i < 8;i++)
-   {
-   		SCL = 1;
-		_nop_();
-		if(SDA)//因为我们采取的是左移的方法因此是从最低位开始写数据移向最高位就用以下代码
-		{
-			Read_Data |= 0x01;
+    unsigned char loop = 8;     //必须为一个字节
+    unsigned char ret = 0;
+	// SDA 设置输入方向
+    SDA = 1;
+    while(loop--){
+		ret <<= 1;
+		SCL = 1;
+		delay_5us();
+        // 高在前低在后
+        if(SDA){
+			ret++;
 		}
-		else
-		{
-			Read_Data &= 0xfe;
-		}
-		_nop_();
-		SCL = 0;
-		_nop_();
-		if(i < 7)//循环的最后一次不能移位，最后一次还移位会把最高位数据移除
-		{	Read_Data = Read_Data << 1;	}
-   }
-   return (Read_Data);
-}				
-/*******************************************************************************
-* 函数名         :I2C_TransmitData(uchar Slave_ADDR,ADDR,DATA)
-* 函数功能     	 :主机发送一个字节到特定的地址
-* 输入           :Slave_ADDR从设备的地址，ADDR从设备的存储地址，DATA需要发送的数据
-* 输出           :从机是否应答0非应答，1应答
-*******************************************************************************/
-//bit I2C_TransmitData(unsigned char Slave_ADDR,ADDR,DATA)
-//{
-//	//写字节到AT24C02
-//	I2C_Start();
-//	I2C_Send_Byte(Slave_ADDR);	//写入需要写的器件地址
-//	if(!Test_ACK())				//等待应答
-//	{	return (0);	}
-//	I2C_Send_Byte(ADDR);		//从该地址开始写
-//	if(!Test_ACK())
-//	{	return (0);	}
-//	I2C_Send_Byte(DATA);		//写入数据
-//	if(!Test_ACK())
-//	{	return (0);	}
-//	I2C_Stop();
-//	return (1);
-//}
-/*******************************************************************************
-* 函数名         :I2C_ReceiveData(uchar Slave_ADDR,ADDR)
-* 函数功能     	 :主机接收一个特定地址的字节
-* 输入           :Slave_ADDR从设备的地址,ADDR从设备的存储单元地址
-* 输出           :读到的数据Read_Data以无符号字符型输出;0有可能接收没被应答
-*******************************************************************************/
-//unsigned char I2C_ReceiveData(unsigned char Slave_ADDR,ADDR)
-//{
-//	//读AT24C02的字节
-//	unsigned char Read_Data;
-//	I2C_Start();
-//	I2C_Send_Byte(Slave_ADDR);		//写入需要读的器件地址
-//	if(!Test_ACK())					//等待应答
-//	{	return (0);	}
-//	I2C_Send_Byte(ADDR);			//从该地址开始读	  
-//	Master_ACK(0);
-//	I2C_Start();
-//	I2C_Send_Byte(Slave_ADDR + 1);	//写入需要读的器件地址，这里+1是因为I2C的最后一位控制读写，为0是写为1是读
-//	if(!Test_ACK())					//等待应答
-//	{	return (0);	}
-//	Read_Data = I2C_Read_Byte();
-//	Master_ACK(0);
-//	I2C_Stop();
-//	return (Read_Data);
-//}
-/*******************************************************************************
-* 函数名         :I2C_ReceiveData(uchar Slave_ADDR,ADDR)
-* 函数功能     	 :主机接收一个特定地址的字节
-* 输入           :Slave_ADDR从设备的地址,ADDR从设备的存储单元地址
-* 输出           :读到的数据Read_Data并以整形形式输出;0有可能接收没被应答
-*******************************************************************************/
-//int I2C_ReceiveData1(unsigned char Slave_ADDR,ADDR)
-//{
-//	//读AT24C02的字节
-//	unsigned int Read_Data;
-//	I2C_Start();
-//	I2C_Send_Byte(Slave_ADDR);		//写入需要读的器件地址
-//	if(!Test_ACK())					//等待应答
-//	{	return (0);	}
-//	I2C_Send_Byte(ADDR);			//从该地址开始读	  
-//	Master_ACK(0);
-//	I2C_Start();
-//	I2C_Send_Byte(Slave_ADDR + 1);	//写入需要读的器件地址，这里+1是因为I2C的最后一位控制读写，为0是写为1是读
-//	if(!Test_ACK())					//等待应答
-//	{	return (0);	}
-//	Read_Data = I2C_Read_Byte();
-//	Master_ACK(0);
-//	I2C_Stop();
-//	return (Read_Data);
-//}
+        SCL = 0;
+        delay_5us();
+    }
+	
+	IIC_Send_ACK(ack);
+	
+    return ret;
+}
