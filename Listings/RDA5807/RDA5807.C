@@ -215,7 +215,4 @@ void RDA5807P_SetVolumeLevel(unsigned char level)
 
 	OperationRDAFM_2w(WRITE, &(RDA5807P_reg_data[0]), 8);
     Delay_Ms_(50);    //Dealy 50 ms
-	
-	//获取当前设置的音量值
-	//temp = RDA5807P_reg_data[7] & 0x0f;
 }

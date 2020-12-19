@@ -1,11 +1,11 @@
-C51 COMPILER V9.55   RDA5807                                                               12/10/2020 17:24:18 PAGE 1   
+C51 COMPILER V9.55   RDA5807                                                               12/18/2020 23:42:04 PAGE 1   
 
 
 C51 COMPILER V9.55, COMPILATION OF MODULE RDA5807
 OBJECT MODULE PLACED IN .\Objects\RDA5807.obj
 COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Listings\RDA5807\RDA5807.C OPTIMIZE(8,SPEED) BROWSE INCDIR(.\Listings\I2
-                    -C;.\Listings\MAIN;.\Listings\RDA5807;.\Listings\System) DEBUG OBJECTEXTEND PRINT(.\Listings\RDA5807.lst) OBJECT(.\Object
-                    -s\RDA5807.obj)
+                    -C;.\Listings\MAIN;.\Listings\RDA5807;.\Listings\System;.\Listings\NUMLED) DEBUG OBJECTEXTEND PRINT(.\Listings\RDA5807.ls
+                    -t) OBJECT(.\Objects\RDA5807.obj)
 
 line level    source
 
@@ -62,7 +62,7 @@ line level    source
   51              0x04, 0x06,
   52              0x0E, 0x1C, //0x25H
   53          };
-C51 COMPILER V9.55   RDA5807                                                               12/10/2020 17:24:18 PAGE 2   
+C51 COMPILER V9.55   RDA5807                                                               12/18/2020 23:42:04 PAGE 2   
 
   54          
   55          /*******************************************************************************
@@ -126,7 +126,7 @@ line level    source
  113   3                      }
  114   2              error_ind = OperationRDAFM_2w(WRITE, (unsigned char *)&RDA5807N_initialization_reg[0], 2);
  115   2              Delay_Ms_(600); 
-C51 COMPILER V9.55   RDA5807                                                               12/10/2020 17:24:18 PAGE 3   
+C51 COMPILER V9.55   RDA5807                                                               12/18/2020 23:42:04 PAGE 3   
 
  116   2                  error_ind = OperationRDAFM_2w(WRITE, (unsigned char *)&RDA5807N_initialization_reg[0], sizeof(RDA5807
              -N_initialization_reg));
@@ -190,7 +190,7 @@ line level    source
  174   1              RDA5807P_REGW[3] = (((curChan & 0x0003) << 6) | 0x10) | (RDA5807P_REGW[3] & 0x0f);      //调谐启用
  175   1              
  176   1              OperationRDAFM_2w(WRITE, &(RDA5807P_REGW[0]), 4);
-C51 COMPILER V9.55   RDA5807                                                               12/10/2020 17:24:18 PAGE 4   
+C51 COMPILER V9.55   RDA5807                                                               12/18/2020 23:42:04 PAGE 4   
 
  177   1              Delay_Ms_(50);     //Delay 50 ms
  178   1      }
@@ -233,10 +233,7 @@ line level    source
  215   1      
  216   1              OperationRDAFM_2w(WRITE, &(RDA5807P_reg_data[0]), 8);
  217   1          Delay_Ms_(50);    //Dealy 50 ms
- 218   1              
- 219   1              //获取当前设置的音量值
- 220   1              //temp = RDA5807P_reg_data[7] & 0x0f;
- 221   1      }
+ 218   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
